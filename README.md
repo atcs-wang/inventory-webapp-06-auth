@@ -272,7 +272,7 @@ Now, we can assume the availability of two variables in all of our `.ejs` files:
 * `isLoggedIn`, a boolean indicating our authentication status
 * `user`, which is either `undefined` if not logged in, or the user info object from the auth token. 
 
-Let's use them to customize our nav bar view:
+Let's use them to customize our nav bar view ( on every page):
 
 ```html
 <header>
@@ -305,11 +305,348 @@ Let's use them to customize our nav bar view:
     </header>
 ```
 
-## (7.5) Authorization for specific routes
-TODO
-## (7.6) Associating inventory data with users
-TODO
-## (7.7) Keeping a user table with roles/permissions
-TODO
-## (7.8) Adding a user page for admins only
+Test your nav bar on each page, both logged in and out. 
 
+## (7.5) Authorization for specific routes
+Now that our users can log in/out and see their authentication status, we now move the issue of *authorization* - only allowing certain kinds of people into certain parts of the site.
+
+The most basic kind of authorization simply requires that the users have been authenticated at all. Auth0's `express-openid-connect` library provides the `requiresAuth()` function for this purpose, demonstrated by the sample `/profile` route we set up earlier:
+
+```js
+    app.get('/profile', requiresAuth(), (req, res) => {
+      res.send(JSON.stringify(req.oidc.user));
+    });
+```
+
+`requiresAuth()` produces a middleware function, which can be applied as a sort of "pre-handler" to any route we want to restrict to just authenticated users.
+
+The only route we really want available to un-authenticated users is the homepage (plus the `/authtest` route); the rest should require authentication.
+
+We can change each of these routes
+```js
+app.get( "/stuff", ( req, res ) => { ... }
+app.get( "/stuff/item/:id", ( req, res ) => { ... }
+app.get("/stuff/item/:id/delete", ( req, res ) => { ... }
+app.post("/stuff/item/:id", ( req, res ) => { ... }
+app.post("/stuff", ( req, res ) => { ... }
+```
+
+to include `requiresAuth()` as a route-specific middleware that occurs before the handlers, like this:
+
+```js
+app.get( "/stuff", requiresAuth(), ( req, res ) => { ... }
+app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => { ... }
+app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => { ... }
+app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => { ... }
+app.post("/stuff", requiresAuth(), ( req, res ) => { ... }
+```
+
+Now, log out and attempt accessing various pages. You should be, in each case, redirected to the Auth0 login page.
+
+> NOTE ON ALTERNATIVES: We could have also used the `requiresAuth()` middleware the way we have other middleware, like this:
+> ```js 
+> app.use(requiresAuth());
+> ```
+> This would require authentication for ALL route handlers below this line;  any route handlers above this line will not require authentication.
+
+> If you simply want to require authentication for *every* page,  yet another alternative would be to change the `config` object's `authRequired` property to `true`.
+
+## (7.6) Associating inventory data with users
+Now that you can only access certain routes when authenticated, we can confidently utilize their user information in those routes. 
+
+Our final step is a very consequential one: associate every item in our database with the user who created and owns that item. 
+
+For now, we will use the user's email (`req.oidc.user.email`) as a unique identifier. 
+
+### (7.6.1) Add a `userid` column to the database table
+
+First, we need to add a column to the database table called something like "userid".
+
+
+If you're using it, we can update `db/db_init.js` appropriately so the (re-)created table has that column. 
+
+My `CREATE TABLE` script changed from:
+  ```sql
+      CREATE TABLE stuff (
+        id INT NOT NULL AUTO_INCREMENT,
+        item VARCHAR(45) NOT NULL,
+        quantity INT NOT NULL,
+        description VARCHAR(150) NULL,
+        PRIMARY KEY (id)
+  ```
+  to 
+
+  ```sql
+      CREATE TABLE stuff (
+        id INT NOT NULL AUTO_INCREMENT,
+        item VARCHAR(45) NOT NULL,
+        quantity INT NOT NULL,
+        description VARCHAR(150) NULL,
+        userid VARCHAR(50) NULL,
+        PRIMARY KEY (id)
+  ```
+
+Then re-run with either:
+```
+> node db/db_init.js
+```
+or (if you set up the `npm` script in `package.json`)
+```
+> npm run initdb
+```
+
+### (7.6.2) Update the CREATE operation
+
+First, we need to make it such that whenever a user tries to create a new item, their email is entered into the database along with it.
+
+Find the SQL statement that inserts a new item in `app.js`. From this:
+
+```sql
+    INSERT INTO stuff
+        (item, quantity)
+    VALUES
+        (?, ?)
+```
+
+to this:
+```sql
+    INSERT INTO stuff
+        (item, quantity, userid)
+    VALUES
+        (?, ?, ?)
+```
+
+Then, in the `/stuff` POST request handler that executes that SQL, we can provide the user's email from the request as the third `?`. Change from this:
+
+```js
+app.post("/stuff", requiresAuth(), ( req, res ) => {
+    db.execute(create_item_sql, [req.body.name, req.body.quantity], (error, results) => { 
+      ...
+    }
+}
+```
+
+to this:
+
+```js
+app.post("/stuff", requiresAuth(), ( req, res ) => {
+    db.execute(create_item_sql, [req.body.name, req.body.quantity, req.oidc.user.email], (error, results) => { 
+      ...
+    }
+}
+```
+
+Then, restart your server and try using the "Add" form. If you check your database, you ought to see that whatever table row you added includes the logged-in user's email.
+
+### (7.6.2) Update the READ (inventory) operation
+
+Now we need to restrict our users to only seeing data that they've created and are associated with.
+
+With the SQL that selects the full list of items, change it from :
+
+```sql 
+    SELECT 
+        id, item, quantity
+    FROM
+        stuff
+```
+
+to :
+```sql
+    SELECT 
+        id, item, quantity
+    FROM
+        stuff
+    WHERE 
+        userid = ?
+```
+
+Then, in the `/stuff` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+
+
+```js
+app.get( "/stuff", requiresAuth(), ( req, res ) => {
+    db.execute(read_stuff_all_sql, (error, results) => {
+      ...
+    }
+}
+```
+
+to this:
+
+```js
+app.get( "/stuff", requiresAuth(), ( req, res ) => {
+    db.execute(read_stuff_all_sql, [req.oidc.user.email], (error, results) => {
+```
+
+Now, revisit the `/stuff` page. You should only see the item(s) created after `userid` was incorporated into the database. Add more items and confirm that they appear. Log out and log in as various users, creating new items and confirming that only those items, and not other user's data, is displayed.
+
+### (7.6.3) Update the READ (item), UPDATE, and DELETE operations
+
+
+While users can now only see data that they've created themselves on the `/stuff` inventory page, they can still access the item detail pages for items created by *any* user. 
+
+> Try navigating to `/stuff/item/:id` for various ids of items that aren't created by the logged in user to see that this is the case.
+
+Furthermore, they can also edit and delete those items as well!
+
+> Try both the edit form and delete buttons on those pages.
+
+We need to restrict the accessibility of the routes associated with the READ, UPDATE, and DELTE operations for individual items. Fortunately, all are quite similar.
+
+With the SQL that selects a single item, change it from :
+
+```sql 
+    SELECT 
+        id, item, quantity, description 
+    FROM
+        stuff
+    WHERE
+        id = ?
+```
+
+to :
+```sql
+    SELECT 
+        id, item, quantity, description 
+    FROM
+        stuff
+    WHERE
+        id = ?
+    AND
+        userid = ?
+```
+
+Then, in the `/stuff/item/:id` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+
+
+```js
+app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(read_stuff_item_sql, [req.params.id], (error, results) => {      
+      ...
+    }
+}
+```
+
+to this:
+
+```js
+app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(read_stuff_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
+      ...
+    }
+}
+```
+
+Now, revisit various `/stuff/item/:id` pages, attempting to access items not created by the current user. You should get a `404` response.
+
+> Although it's not exactly true that the item doesn't exist, since it's not authorized for that user to access it, it is appropriate to act like it doesn't. In some cases of lack of authorization, we might prefer a `403 Forbidden` code instead.
+
+Although the item detail page and its `Edit` form cannot be accessed any longer by unauthorized users, its still good to make the UPDATE operation restricted to matching users as well. 
+
+With the SQL that updates a single item, change it from :
+
+```sql 
+    UPDATE
+        stuff
+    SET
+        item = ?,
+        quantity = ?,
+        description = ?
+    WHERE
+        id = ?
+```
+
+to :
+```sql
+    UPDATE
+        stuff
+    SET
+        item = ?,
+        quantity = ?,
+        description = ?
+    WHERE
+        id = ?
+    AND
+        userid = ?
+```
+
+Then, in the `/stuff/item/:id` POST request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+
+
+```js
+app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id], (error, results) => {
+      ...
+    }
+}
+```
+
+to this:
+
+```js
+app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id, req.oidc.user.email], (error, results) => {
+      ...
+    }
+}
+
+```
+
+> There are tools that allow people to make arbitrary POST requests - useful for development and testing, but also dangerous for unprotected POST request handlers.
+
+Lastly, the `DELETE` operation needs to be locked down. This is particularly important, because as a GET request, its still quite easy for an unauthorized user to simply enter the URL and trigger the deletion of an arbitrary item.
+
+
+With the SQL that deletes a single item, change it from :
+
+```sql 
+    DELETE 
+    FROM
+        stuff
+    WHERE
+        id = ?
+```
+
+to :
+```sql
+    DELETE 
+    FROM
+        stuff
+    WHERE
+        id = ?
+    AND
+        userid = ?
+```
+
+Then, in the `/stuff/item/:id/delete` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+
+
+```js
+app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
+    db.execute(delete_item_sql, [req.params.id], (error, results) => {
+      ...
+    }
+}
+```
+
+to this:
+```js
+app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
+    db.execute(delete_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
+      ...
+    }
+}
+```
+
+Finally, verify that attempting a delete of another users' item  via entering the URL into the URL bar. It should redirect you to the `/stuff` page, but the database should not have changed.
+
+> You can also double check that you have properly disallowed both editing and deleting by re-enabling access to other user's item detail page, and trying the form and delete buttons.
+
+### (7.7) Conclusion
+
+At this point, we have integrated authentication and some basic authorization.  We have associated data with specific users, and only authorized users to perform CRUD operations on their own data.
+
+What next? Our app could use a user management system, accessible by a limited number of admin users. 
+
+Before we do that, however, there are some structural changes and improvements that we ought to make to our project that will pay dividends down the road. 

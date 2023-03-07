@@ -78,9 +78,11 @@ const read_stuff_all_sql = `
         id, item, quantity
     FROM
         stuff
+    WHERE 
+        userid = ?
 `
-app.get( "/stuff", ( req, res ) => {
-    db.execute(read_stuff_all_sql, (error, results) => {
+app.get( "/stuff", requiresAuth(), ( req, res ) => {
+    db.execute(read_stuff_all_sql, [req.oidc.user.email], (error, results) => {
         if (error)
             res.status(500).send(error); //Internal Server Error
         else {
@@ -97,9 +99,11 @@ const read_stuff_item_sql = `
         stuff
     WHERE
         id = ?
+    AND
+        userid = ?
 `
-app.get( "/stuff/item/:id", ( req, res ) => {
-    db.execute(read_stuff_item_sql, [req.params.id], (error, results) => {
+app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(read_stuff_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
         if (error)
             res.status(500).send(error); //Internal Server Error
         else if (results.length == 0)
@@ -120,9 +124,11 @@ const delete_item_sql = `
         stuff
     WHERE
         id = ?
+    AND
+        userid = ?
 `
-app.get("/stuff/item/:id/delete", ( req, res ) => {
-    db.execute(delete_item_sql, [req.params.id], (error, results) => {
+app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
+    db.execute(delete_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
         if (error)
             res.status(500).send(error); //Internal Server Error
         else {
@@ -141,9 +147,11 @@ const update_item_sql = `
         description = ?
     WHERE
         id = ?
+    AND
+        userid = ?
 `
-app.post("/stuff/item/:id", ( req, res ) => {
-    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id], (error, results) => {
+app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id, req.oidc.user.email], (error, results) => {
         if (error)
             res.status(500).send(error); //Internal Server Error
         else {
@@ -155,12 +163,12 @@ app.post("/stuff/item/:id", ( req, res ) => {
 // define a route for item CREATE
 const create_item_sql = `
     INSERT INTO stuff
-        (item, quantity)
+        (item, quantity, userid)
     VALUES
-        (?, ?)
+        (?, ?, ?)
 `
-app.post("/stuff", ( req, res ) => {
-    db.execute(create_item_sql, [req.body.name, req.body.quantity], (error, results) => {
+app.post("/stuff", requiresAuth(), ( req, res ) => {
+    db.execute(create_item_sql, [req.body.name, req.body.quantity, req.oidc.user.email], (error, results) => {
         if (error)
             res.status(500).send(error); //Internal Server Error
         else {
