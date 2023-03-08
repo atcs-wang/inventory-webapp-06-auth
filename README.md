@@ -103,7 +103,7 @@ Choose:
     ...
 
     ```
-    * Restart your server and visit the `/profile` route, both logged in and logged out.
+  * Restart your server and visit the `/profile` route, both logged in and logged out.
   * The wizard should be complete, and you can click `Go To Application Settings`.
 
 
@@ -142,7 +142,7 @@ The `<SECRET>` can technically be replaced with anything, but Auth0's `Applicati
   };
   ```
 
-Double check that your server is still able to do `/login` and `/logout` successfully.
+> Double check that your server is still able to do `/login` and `/logout` successfully.
 
 Now you can push the code without worrying about exposing the secrets. 
 
@@ -163,8 +163,7 @@ Then, you need to update the `Application Settings` on Auth0: In the `Applicatio
   ``` 
 
 Save your changes.
-## (7.3) Adding a log-in / log-out button
-# TODO
+## (7.3) Adding a log-in / log-out button (+ nav bar)
 
 We obviously need a way to log in and out that's more intuitive for the user than changing the URL manually. 
 
@@ -213,7 +212,7 @@ Go ahead and add one into each of our views at the top of the body...
       ...
 ```
 
-> If not already included, add Materilize source and initialization scripts, which are needed for the mobile side-nav to work.
+If not already included, add Materilize source and initialization scripts, which are needed for the mobile side-nav to work.
 ```html
     <!-- Materialize JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
@@ -223,40 +222,36 @@ Go ahead and add one into each of our views at the top of the body...
 
 ```
 
-You can test the buttons to make sure they work.
+> You should test the buttons to make sure they work.
 
 ## (7.4) Changing view on authentication; displaying user information
 
-However, we'd only want to show one of the two buttons at a time - Login if not yet authenticated, and Logout if already authenticated. We might also like to show, if you are logged in, some of your user information, making it clear who you're logged in as.
+However, we only want to show one of the two buttons at a time - LOGIN if not yet authenticated, and LOGOUT if already authenticated. We might also like to show, if you are logged in, some of your user information, making it clear who you're logged in as.
 
-We've seen that the state of auth is included with all incoming requests via `req.oidc`, and that it could be used to determine how we respond.  The `/authtest` route from above demonstrated the `req.oidc.isAuthenticated()` method which tells us whether we are logged in, and the `/profile` route demonstrated `req.oidc.user`, which has user info included with the auth token.
+The `/authtest` route from above demonstrated the `req.oidc.isAuthenticated()` method which tells us whether we are logged in, and the `/profile` route demonstrated the `req.oidc.user` object, which has user info included with the auth token.
 
-We want our server to provide the state of authentication to EJS at render time. 
+In general, the state of an incoming request's authentication is available via `req.oidc`, and that can be used to determine how we respond. We want our server to make the state of authentication available to EJS during the rendering step. 
 
-One way of doing this is to pass it as part of the context parameter given at `res.render(...)`.
-For example we could change the `res.render` in the `/stuff` route handler from this:
 
-```js
-app.get( "/stuff", ( req, res ) => {
-    ...
-            res.render('stuff', { inventory : results });
-    ...
-} );
-```
+One way is pass it as part of the context parameter given at `res.render(...)`.
 
-to this:
+For example we *could* (but don't actually) change the `res.render` in the `/stuff` route handler to something like this:
 
 ```js
 app.get( "/stuff", ( req, res ) => {
     ...
-            res.render('stuff', { inventory : results , loggedIn : res.oidc.isAuthenticated });
+            res.render('stuff', { inventory : results , 
+                                  isLoggedIn : res.oidc.isAuthenticated()
+                                  user: res.oidc.user });
     ...
 } );
 ```
 
-However, we'd have to do this for each GET route handler - tedious, and easy to miss one as our app grows.
+This would provide `stuff.ejs` the `isLoggedIn` and `user` variables, and those could be used to change the view. 
 
-A better way is to create a single middleware that, for all GET routes, will add a "local" property to the `res` response object, providing the information to EJS for all page renders.
+However, if we wanted that information for *every* page we render, we'd have to repeatedly pass the value to each and every `res.render()` call - tedious, and easy to miss one as our app grows.
+
+A better way is to create a single middleware that, for all routes, will add a "local" property to the `res` response object, passing the information to EJS for all page renders.
 
 Add this to the `app.js` after the other middleware (`app.use`) but before any route handlers (`app.get`, `app.post`, etc.)
 
@@ -481,20 +476,119 @@ app.get( "/stuff", requiresAuth(), ( req, res ) => {
 
 Now, revisit the `/stuff` page. You should only see the item(s) created after `userid` was incorporated into the database. Add more items and confirm that they appear. Log out and log in as various users, creating new items and confirming that only those items, and not other user's data, is displayed.
 
-### (7.6.3) Update the READ (item), UPDATE, and DELETE operations
-
+### (7.6.3) Update the UPDATE, DELETE, and READ (item) operations
 
 While users can now only see data that they've created themselves on the `/stuff` inventory page, they can still access the item detail pages for items created by *any* user. 
 
 > Try navigating to `/stuff/item/:id` for various ids of items that aren't created by the logged in user to see that this is the case.
 
-Furthermore, they can also edit and delete those items as well!
+Even worse, they can also edit and delete those items as well!
 
 > Try both the edit form and delete buttons on those pages.
 
-We need to restrict the accessibility of the routes associated with the READ, UPDATE, and DELTE operations for individual items. Fortunately, all are quite similar.
+We need to restrict the accessibility of the routes associated with the UPDATE, DELETE, and READ operations for individual items. Fortunately, all are quite similar.
 
-With the SQL that selects a single item, change it from :
+
+#### Restrict UPDATE:
+
+With the SQL that updates a single item, change it from :
+
+```sql 
+    UPDATE
+        stuff
+    SET
+        item = ?,
+        quantity = ?,
+        description = ?
+    WHERE
+        id = ?
+```
+
+to :
+```sql
+    UPDATE
+        stuff
+    SET
+        item = ?,
+        quantity = ?,
+        description = ?
+    WHERE
+        id = ?
+    AND
+        userid = ?
+```
+
+Then, in the `/stuff/item/:id` POST request handler that executes that SQL, we can provide the user's email from the request as the new `?`. Change from this:
+
+```js
+app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id], (error, results) => {
+      ...
+    }
+}
+```
+
+to this:
+
+```js
+app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
+    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id, req.oidc.user.email], (error, results) => {
+      ...
+    }
+}
+```
+> Check that filling out the Edit form for an item owned by another user results in no changes. It should still refresh the page on submit, but no changes will be made.
+
+#### Restrict DELETE 
+Next, the `DELETE` operation needs to be locked down. 
+
+With the SQL that deletes a single item, change it from :
+
+```sql 
+    DELETE 
+    FROM
+        stuff
+    WHERE
+        id = ?
+```
+
+to :
+```sql
+    DELETE 
+    FROM
+        stuff
+    WHERE
+        id = ?
+    AND
+        userid = ?
+```
+
+Then, in the `/stuff/item/:id/delete` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+
+
+```js
+app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
+    db.execute(delete_item_sql, [req.params.id], (error, results) => {
+      ...
+    }
+}
+```
+
+to this:
+```js
+app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
+    db.execute(delete_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
+      ...
+    }
+}
+```
+
+> Verify that attempting a delete of another users' item  via the button does not, in fact, cause the deletion of the item; it should redirect you to the `/stuff` page, but the database should not have changed, and the item detail page still be accessible. 
+
+
+#### Restrict READ (single item)
+
+Lastly, with the SQL that selects a single item, change it from :
 
 ```sql 
     SELECT 
@@ -540,108 +634,9 @@ app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => {
 
 Now, revisit various `/stuff/item/:id` pages, attempting to access items not created by the current user. You should get a `404` response.
 
-> Although it's not exactly true that the item doesn't exist, since it's not authorized for that user to access it, it is appropriate to act like it doesn't. In some cases of lack of authorization, we might prefer a `403 Forbidden` code instead.
+> Although it's not exactly true that the item doesn't exist, it is appropriate to act like it doesn't since the user should not be aware of the existence of other user's items. More accurately, we'd say that it is not authorized for that user to access that page. In such cases, we sometimes prefer a `403 Forbidden` code instead of `404 Not Found`.
 
-Although the item detail page and its `Edit` form cannot be accessed any longer by unauthorized users, its still good to make the UPDATE operation restricted to matching users as well. 
-
-With the SQL that updates a single item, change it from :
-
-```sql 
-    UPDATE
-        stuff
-    SET
-        item = ?,
-        quantity = ?,
-        description = ?
-    WHERE
-        id = ?
-```
-
-to :
-```sql
-    UPDATE
-        stuff
-    SET
-        item = ?,
-        quantity = ?,
-        description = ?
-    WHERE
-        id = ?
-    AND
-        userid = ?
-```
-
-Then, in the `/stuff/item/:id` POST request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
-
-
-```js
-app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
-    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id], (error, results) => {
-      ...
-    }
-}
-```
-
-to this:
-
-```js
-app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
-    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id, req.oidc.user.email], (error, results) => {
-      ...
-    }
-}
-
-```
-
-> There are tools that allow people to make arbitrary POST requests - useful for development and testing, but also dangerous for unprotected POST request handlers.
-
-Lastly, the `DELETE` operation needs to be locked down. This is particularly important, because as a GET request, its still quite easy for an unauthorized user to simply enter the URL and trigger the deletion of an arbitrary item.
-
-
-With the SQL that deletes a single item, change it from :
-
-```sql 
-    DELETE 
-    FROM
-        stuff
-    WHERE
-        id = ?
-```
-
-to :
-```sql
-    DELETE 
-    FROM
-        stuff
-    WHERE
-        id = ?
-    AND
-        userid = ?
-```
-
-Then, in the `/stuff/item/:id/delete` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
-
-
-```js
-app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
-    db.execute(delete_item_sql, [req.params.id], (error, results) => {
-      ...
-    }
-}
-```
-
-to this:
-```js
-app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
-    db.execute(delete_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
-      ...
-    }
-}
-```
-
-Finally, verify that attempting a delete of another users' item  via entering the URL into the URL bar. It should redirect you to the `/stuff` page, but the database should not have changed.
-
-> You can also double check that you have properly disallowed both editing and deleting by re-enabling access to other user's item detail page, and trying the form and delete buttons.
+> Now both the `Edit` form and `Delete` button cannot be directly accessed any longer by unauthorized users.  It may seem unnecessary to have restricted those other operations when restricting access to the detail page makes it pretty difficult for normal users to accidentally edit or delete an item they can't see. But it's safer to be thorough, as arbitrary GET and POST requests can in fact still be made by malicious users without forms or buttons. 
 
 ### (7.7) Conclusion
 
