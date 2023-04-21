@@ -1,7 +1,7 @@
 # Part 07: Authentication and Authorization  
 
 This tutorial follows after:
-[Part 06: First Deployment](https://github.com/atcs-wang/inventory-webapp-05-handling-forms-post-crud)
+[Part 06: First Deployment](https://github.com/atcs-wang/assignment list-webapp-05-handling-forms-post-crud)
 
 
 
@@ -20,7 +20,7 @@ Choose:
 
   * At  `Choose your path`, click `Integrate Now` beneath `I want to integrate with my app`
 
-  * At  `Configure Auth0`, the `Allowed Callback URL` box should contain `http://localhost:3000/callback` and the `Allowed Logout URLs` box should contain `http://localhost:3000`. Change the number from `3000` to whatever your PORT value is during development. (Mine is 8080)   
+  * At  `Configure Auth0`, the `Allowed Callback URL` box should contain `http://localhost:3000/callback` and the `Allowed Logout URLs` box should contain `http://localhost:3000`. If necessary, change the numbers from `3000` to whatever your PORT value is during development.   
 
   * At `Integrate Auth0`, take the command 
 
@@ -146,6 +146,8 @@ The `<SECRET>` can technically be replaced with anything, but Auth0's `Applicati
 
 Now you can push the code without worrying about exposing the secrets. 
 
+### (7.2.1) OPTIONAL: Deployed website update
+
 However, if you have a deployed app, we need it to be given those environment variables too. 
 
 The only one that needs to be changed for the deployed environment is the `AUTH0_BASE_URL`, which should be the URL of the actual hosted site, not `localhost`.
@@ -167,66 +169,47 @@ Save your changes.
 
 We obviously need a way to log in and out that's more intuitive for the user than changing the URL manually. 
 
-We can easily add Login and Logout buttons to our pages, which are just links to `/login` and `/logout` 
+The natural solution is to add Login and Logout buttons (that is, links to `/login` and `/logout`) to the navbar at the top of our pages 
 ```html
-    <a href="/login" class="btn blue">Login</a></li>
-    <a href="/logout" class="btn red">Logout</a></li>
+    <a href="/login" class="btn blue">Login</a>
+    <a href="/logout" class="btn red">Logout</a>
 ```
 
-They would look better on a navigation bar that is consistent at the top of the each page.
-> We have neglected to make a nav bar thus far in our project. In retrospect, we should have just added one at the prototype stage. 
-Materialize has some nice support for good looking nav bars, which can collapse for small screens like mobile devices, and provide an alternative side menu nav.
-
-Go ahead and add one into each of our views at the top of the body... 
+Go ahead and update the `<nav>` in each of the EJS views, adding the buttons in both the main nav, and the mobile side nav. 
 
 ```html
 ...
-</head>
-<body>
-    <!-- Nav bar -->
-    <header>
-        <nav>
-            <div class="nav-wrapper">
-                <a href="/" class="brand-logo">Stuff Manager</a>
-                <a href="#" data-target="mobile-nav" class="sidenav-trigger"><i class="material-icons">menu</i></a>
-                <!-- Main nav, hidden for small screens -->
-                <ul id="desktop-nav" class="right hide-on-med-and-down">
-                    <li><a href="/"><i class="material-icons left">home</i>Home</a></li>
-                    <li><a href="/stuff"><i class="material-icons left">list</i>Inventory</a></li>
-                    <li><a href="/login" class="btn blue">Login</a></li>
-                    <li><a href="/logout" class="btn red">Logout</a></li>
-                </ul>
-            </div>
-        </nav>
-        <!-- Mobile nav menu, shown when menu button clicked -->
-        <ul id="mobile-nav" class="sidenav">
-            <li><a href="/"><i class="material-icons left">home</i>Home</a></li>
-            <li><a href="/stuff"><i class="material-icons left">list</i>Inventory</a></li>
-            <li><a href="/login" class="btn blue">Login</a></li>
-            <li><a href="/logout" class="btn red">Logout</a></li>
-        </ul>
-    </header>
-
-    <!-- rest of the body -->
-    <div class="container">
-      ...
+<!-- Nav bar -->
+<header>
+    <nav>
+        <div class="nav-wrapper">
+            <a href="/" class="brand-logo"><i class="material-icons left">school</i>Homework Manager</a>
+            <a href="#" data-target="mobile-nav" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+            <!-- Main nav, hidden for small screens -->
+            <ul id="desktop-nav" class="right hide-on-med-and-down">
+                <li><a href="/"><i class="material-icons left">home</i> Home</a></li>
+                <li><a href="/assignments"><i class="material-icons left">list</i> Assignments</a></li>
+                <li><a href="/login" class="btn blue">Login</a></li>
+                <li><a href="/logout" class="btn red">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    <!-- Mobile nav menu, shown when menu button clicked -->
+    <ul id="mobile-nav" class="sidenav">
+        <li><a href="/"><i class="material-icons left">home</i> Home</a></li>
+        <li><a href="/assignments"><i class="material-icons left">list</i> Assignments</a></li>
+        <li><a href="/login" class="btn blue">Login</a></li>
+        <li><a href="/logout" class="btn red">Logout</a></li>
+    </ul>
+</header>
 ```
 
-If not already included, add Materilize source and initialization scripts, which are needed for the mobile side-nav to work.
-```html
-    <!-- Materialize JavaScript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 
-    <!-- initialize Materialize elements -->
-    <script src="/scripts/materializeAutoinit.js"></script>
-
-```
-
-> You should test the buttons to make sure they work.
+Test the buttons to make sure they work.
 
 ## (7.4) Changing view on authentication; displaying user information
 
-However, we only want to show one of the two buttons at a time - LOGIN if not yet authenticated, and LOGOUT if already authenticated. We might also like to show, if you are logged in, some of your user information, making it clear who you're logged in as.
+We probably only want to show one of the two buttons at a time - LOGIN if not yet authenticated, and LOGOUT if already authenticated. We might also like to show, if you are logged in, some of your user information, making it clear who you're logged in as.
 
 The `/authtest` route from above demonstrated the `req.oidc.isAuthenticated()` method which tells us whether we are logged in, and the `/profile` route demonstrated the `req.oidc.user` object, which has user info included with the auth token.
 
@@ -235,19 +218,19 @@ In general, the state of an incoming request's authentication is available via `
 
 One way is pass it as part of the context parameter given at `res.render(...)`.
 
-For example we *could* (but don't actually) change the `res.render` in the `/stuff` route handler to something like this:
+For example we *could* (but don't actually) change the `res.render` in the `/assignments` route handler to something like this:
 
 ```js
-app.get( "/stuff", ( req, res ) => {
+app.get( "/assignments", ( req, res ) => {
     ...
-            res.render('stuff', { inventory : results , 
+            res.render('assignments', { assignment list : results , 
                                   isLoggedIn : res.oidc.isAuthenticated()
                                   user: res.oidc.user });
     ...
 } );
 ```
 
-This would provide `stuff.ejs` the `isLoggedIn` and `user` variables, and those could be used to change the view. 
+This would provide `assignments.ejs` the `isLoggedIn` and `user` variables, and those could be used to change the view. 
 
 However, if we wanted that information for *every* page we render, we'd have to repeatedly pass the value to each and every `res.render()` call - tedious, and easy to miss one as our app grows.
 
@@ -271,13 +254,13 @@ Let's use them to customize our nav bar view ( on every page):
 
 ```html
 <header>
-        <nav>
+         <nav>
             <div class="nav-wrapper">
-                <a href="/" class="brand-logo">Stuff Manager</a>
+                <a href="/" class="brand-logo"><i class="material-icons left">school</i>Homework Manager</a>
                 <a href="#" data-target="mobile-nav" class="sidenav-trigger"><i class="material-icons">menu</i></a>
                 <ul id="desktop-nav" class="right hide-on-med-and-down">
-                    <li><a href="/"><i class="material-icons left">home</i>Home</a></li>
-                    <li><a href="/stuff"><i class="material-icons left">list</i>Inventory</a></li>
+                    <li><a href="/"><i class="material-icons left">home</i> Home</a></li>
+                    <li><a href="/assignments"><i class="material-icons left">list</i> Assignments</a></li>
                     <% if (isLoggedIn) { %>
                         <li><a href="/profile"><i class="material-icons left">person</i> Hello, <%=user.name%></a> </li>
                         <li><a href="/logout" class="btn red">Logout</a></li>                        
@@ -288,9 +271,9 @@ Let's use them to customize our nav bar view ( on every page):
             </div>
         </nav>
         <ul id="mobile-nav" class="sidenav">
-             <li><a href="/"><i class="material-icons left">home</i>Home</a></li>
-             <li><a href="/stuff"><i class="material-icons left">list</i>Inventory</a></li>
-             <% if (isLoggedIn) { %>
+            <li><a href="/"><i class="material-icons left">home</i> Home</a></li>
+            <li><a href="/assignments"><i class="material-icons left">list</i> Assignments</a></li>
+            <% if (isLoggedIn) { %>
                 <li><a href="/profile"><i class="material-icons left">person</i> Hello, <%=user.name%></a> </li>
                 <li><a href="/logout" class="btn red">Logout</a></li>                        
             <% } else { %>
@@ -319,21 +302,21 @@ The only route we really want available to un-authenticated users is the homepag
 
 We can change each of these routes
 ```js
-app.get( "/stuff", ( req, res ) => { ... }
-app.get( "/stuff/item/:id", ( req, res ) => { ... }
-app.get("/stuff/item/:id/delete", ( req, res ) => { ... }
-app.post("/stuff/item/:id", ( req, res ) => { ... }
-app.post("/stuff", ( req, res ) => { ... }
+app.get( "/assignments", ( req, res ) => { ... }
+app.get( "/assignments/:id", ( req, res ) => { ... }
+app.get("/assignments/:id/delete", ( req, res ) => { ... }
+app.post("/assignments/:id", ( req, res ) => { ... }
+app.post("/assignments", ( req, res ) => { ... }
 ```
 
 to include `requiresAuth()` as a route-specific middleware that occurs before the handlers, like this:
 
 ```js
-app.get( "/stuff", requiresAuth(), ( req, res ) => { ... }
-app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => { ... }
-app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => { ... }
-app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => { ... }
-app.post("/stuff", requiresAuth(), ( req, res ) => { ... }
+app.get( "/assignments", requiresAuth(), ( req, res ) => { ... }
+app.get( "/assignments/:id", requiresAuth(), ( req, res ) => { ... }
+app.get("/assignments/:id/delete", requiresAuth(), ( req, res ) => { ... }
+app.post("/assignments/:id", requiresAuth(), ( req, res ) => { ... }
+app.post("/assignments", requiresAuth(), ( req, res ) => { ... }
 ```
 
 Now, log out and attempt accessing various pages. You should be, in each case, redirected to the Auth0 login page.
@@ -346,76 +329,102 @@ Now, log out and attempt accessing various pages. You should be, in each case, r
 
 > If you simply want to require authentication for *every* page,  yet another alternative would be to change the `config` object's `authRequired` property to `true`.
 
-## (7.6) Associating inventory data with users
+## (7.6) Associating assignment data with users
 Now that you can only access certain routes when authenticated, we can confidently utilize their user information in those routes. 
 
-Our final step is a very consequential one: associate every item in our database with the user who created and owns that item. 
+Our final step is a very consequential one: associate every assignment in our database with the user who created and owns that assignment. 
 
-For now, we will use the user's email (`req.oidc.user.email`) as a unique identifier. 
+The identification token (`req.oidc.user`) always has a field called `sub` (short for "subject") which is a unique identifier for any user (max 255 characters long). So we can use `req.oidc.user.`sub`` and 
 
-### (7.6.1) Add a `userid` column to the database table
-
-First, we need to add a column to the database table called something like "userid".
+> Another option is to use the user's `sub` (`req.oidc.user.`sub``) as a unique identifier. Most social logins are ultimately based on an `sub` address (Google for example), but its not universal unless you're selective about your login options.
 
 
-If you're using it, we can update `db/db_init.js` appropriately so the (re-)created table has that column. 
+### (7.6.1) Add a `userId` column to the database table
 
-My `CREATE TABLE` script changed from:
+First, we need to add a column to the database table called something like "userId".
+
+
+If you're using it, we can update `db/db_create.js` appropriately so the (re-)created `assignment` table has that column. 
+
+My `CREATE TABLE assignments` script changed from:
   ```sql
-      CREATE TABLE stuff (
-        id INT NOT NULL AUTO_INCREMENT,
-        item VARCHAR(45) NOT NULL,
-        quantity INT NOT NULL,
+    CREATE TABLE assignments (
+        assignmentId INT NOT NULL AUTO_INCREMENT,
+        title VARCHAR(45) NOT NULL,
+        priority INT NULL,
+        subjectId INT NOT NULL,
+        dueDate DATE NULL,
         description VARCHAR(150) NULL,
-        PRIMARY KEY (id)
+        PRIMARY KEY (assignmentId),
+        INDEX assignmentSubject_idx (subjectId ASC),
+        CONSTRAINT assignmentSubject
+            FOREIGN KEY (subjectId)
+            REFERENCES subjects (subjectId)
+            ON DELETE RESTRICT
+            ON UPDATE CASCADE);
   ```
   to 
 
   ```sql
-      CREATE TABLE stuff (
-        id INT NOT NULL AUTO_INCREMENT,
-        item VARCHAR(45) NOT NULL,
-        quantity INT NOT NULL,
+          CREATE TABLE assignments (
+        assignmentId INT NOT NULL AUTO_INCREMENT,
+        title VARCHAR(45) NOT NULL,
+        priority INT NULL,
+        subjectId INT NOT NULL,
+        dueDate DATE NULL,
         description VARCHAR(150) NULL,
-        userid VARCHAR(50) NULL,
-        PRIMARY KEY (id)
+        userId VARCHAR(255) NULL, -- this is the new line!
+        PRIMARY KEY (assignmentId),
+        INDEX assignmentSubject_idx (subjectId ASC),
+        CONSTRAINT assignmentSubject
+            FOREIGN KEY (subjectId)
+            REFERENCES subjects (subjectId)
+            ON DELETE RESTRICT
+            ON UPDATE CASCADE);
   ```
 
-Then re-run with either:
+Then re-create your database (and repopulate it) with either:
 ```
-> node db/db_init.js
+> node db/db_create.js
+> node db/db_insert_sample.js
 ```
 or (if you set up the `npm` script in `package.json`)
 ```
-> npm run initdb
+> npm run dbcreate
+> npm run dbsample
 ```
+
+> You may have noticed that our `db_insert_sample.js` populates `assignments` with some sample rows , but does not set a `userId` for any of them. As a result, they don't belong to anyone! So, we could, if we wanted, remove part that from our script. 
+>
+> We DO still need (for now) the part of `db_insert_sample.js` that fills in the `subjects` table.
 
 ### (7.6.2) Update the CREATE operation
 
-First, we need to make it such that whenever a user tries to create a new item, their email is entered into the database along with it.
+First, we need to make it such that whenever a user tries to create a new assignment, their `sub` is entered into the database along with it.
 
-Find the SQL statement that inserts a new item in `app.js`. From this:
+Find the SQL statement that inserts a new assignment in `app.js`. From this:
 
 ```sql
-    INSERT INTO stuff
-        (item, quantity)
-    VALUES
-        (?, ?)
+INSERT INTO assignments 
+    (title, priority, subjectId, dueDate) 
+VALUES 
+    (?, ?, ?, ?);
 ```
 
 to this:
 ```sql
-    INSERT INTO stuff
-        (item, quantity, userid)
-    VALUES
-        (?, ?, ?)
+INSERT INTO assignments 
+    (title, priority, subjectId, dueDate, userId) 
+VALUES 
+    (?, ?, ?, ?, ?);
 ```
 
-Then, in the `/stuff` POST request handler that executes that SQL, we can provide the user's email from the request as the third `?`. Change from this:
+Then, in the `/assignments` POST request handler that executes that SQL, we can provide the user's `sub` from the request as the final `?`. Change from this:
 
 ```js
-app.post("/stuff", requiresAuth(), ( req, res ) => {
-    db.execute(create_item_sql, [req.body.name, req.body.quantity], (error, results) => { 
+app.post("/assignments", requiresAuth(), ( req, res ) => {
+    db.execute(create_assignment_sql, [req.body.title, req.body.priority, req.body.subject, req.body.dueDate], (error, results) => {
+
       ...
     }
 }
@@ -424,44 +433,52 @@ app.post("/stuff", requiresAuth(), ( req, res ) => {
 to this:
 
 ```js
-app.post("/stuff", requiresAuth(), ( req, res ) => {
-    db.execute(create_item_sql, [req.body.name, req.body.quantity, req.oidc.user.email], (error, results) => { 
+app.post("/assignments", requiresAuth(), ( req, res ) => {
+    db.execute(create_assignment_sql, [req.body.title, req.body.priority, req.body.subject, req.body.dueDate, req.oidc.user.sub], (error, results) => {
+
       ...
     }
 }
 ```
 
-Then, restart your server and try using the "Add" form. If you check your database, you ought to see that whatever table row you added includes the logged-in user's email.
+Try using the "Add" form. If you check your database, you ought to see that whatever table row you added includes the logged-in user's `sub`.
 
-### (7.6.2) Update the READ (inventory) operation
+### (7.6.2) Update the READ (assignment list) operation
 
 Now we need to restrict our users to only seeing data that they've created and are associated with.
 
-With the SQL that selects the full list of items, change it from :
+With the SQL that selects the full list of assignments, change it from :
 
 ```sql 
     SELECT 
-        id, item, quantity
-    FROM
-        stuff
+        assignmentId, title, priority, subjectName, 
+        assignments.subjectId as subjectId,
+        DATE_FORMAT(dueDate, "%m/%d/%Y (%W)") AS dueDateFormatted
+    FROM assignments
+    JOIN subjects
+        ON assignments.subjectId = subjects.subjectId
+    ORDER BY assignments.assignmentId DESC
 ```
 
 to :
 ```sql
     SELECT 
-        id, item, quantity
-    FROM
-        stuff
-    WHERE 
-        userid = ?
+        assignmentId, title, priority, subjectName, 
+        assignments.subjectId as subjectId,
+        DATE_FORMAT(dueDate, "%m/%d/%Y (%W)") AS dueDateFormatted
+    FROM assignments
+    JOIN subjects
+        ON assignments.subjectId = subjects.subjectId
+    WHERE assignments.userId = ?    --this is the new line
+    ORDER BY assignments.assignmentId DESC
 ```
 
-Then, in the `/stuff` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+Then, in the `/assignments` GET request handler that executes that SQL, we can once again provide the user's `sub` from the request as the new `?`. Change from this:
 
 
 ```js
-app.get( "/stuff", requiresAuth(), ( req, res ) => {
-    db.execute(read_stuff_all_sql, (error, results) => {
+app.get( "/assignments", requiresAuth(), ( req, res ) => {
+    db.execute(read_assignments_all_sql, (error, results) => {
       ...
     }
 }
@@ -470,59 +487,63 @@ app.get( "/stuff", requiresAuth(), ( req, res ) => {
 to this:
 
 ```js
-app.get( "/stuff", requiresAuth(), ( req, res ) => {
-    db.execute(read_stuff_all_sql, [req.oidc.user.email], (error, results) => {
+app.get( "/assignments", requiresAuth(), ( req, res ) => {
+    db.execute(read_assignments_all_sql, [req.oidc.user.sub], (error, results) => {
+
 ```
 
-Now, revisit the `/stuff` page. You should only see the item(s) created after `userid` was incorporated into the database. Add more items and confirm that they appear. Log out and log in as various users, creating new items and confirming that only those items, and not other user's data, is displayed.
+Now, revisit the `/assignments` page. You should only see the assignment(s) created after `userId` was incorporated into the database. Add more assignments and confirm that they appear. Log out and log in as various users, creating new assignments and confirming that only those assignments, and not other user's data, is displayed.
 
-### (7.6.3) Update the UPDATE, DELETE, and READ (item) operations
+### (7.6.3) Update the UPDATE, DELETE, and READ (assignment) operations
 
-While users can now only see data that they've created themselves on the `/stuff` inventory page, they can still access the item detail pages for items created by *any* user. 
+While users can now only see data that they've created themselves on the `/assignments` assignment list page, they can still access the assignment detail pages for assignments created by *any* user. 
 
-> Try navigating to `/stuff/item/:id` for various ids of items that aren't created by the logged in user to see that this is the case.
+> Try navigating to `/assignment/:id` for various ids of assignments that aren't created by the logged in user to see that this is the case.
 
-Even worse, they can also edit and delete those items as well!
+Even worse, they can also edit and delete those assignments as well!
 
 > Try both the edit form and delete buttons on those pages.
 
-We need to restrict the accessibility of the routes associated with the UPDATE, DELETE, and READ operations for individual items. Fortunately, all are quite similar.
+We need to restrict the accessibility of the routes associated with the UPDATE, DELETE, and READ operations for individual assignments. Fortunately, all are quite similar.
 
 
 #### Restrict UPDATE:
 
-With the SQL that updates a single item, change it from :
+With the SQL that updates a single assignment, change it from :
 
 ```sql 
-    UPDATE
-        stuff
-    SET
-        item = ?,
-        quantity = ?,
-        description = ?
-    WHERE
-        id = ?
+UPDATE
+    assignments
+SET
+    title = ?,
+    priority = ?,
+    subjectId = ?,
+    dueDate = ?,
+    description = ?
+WHERE
+    assignmentId = ?
 ```
 
 to :
 ```sql
-    UPDATE
-        stuff
-    SET
-        item = ?,
-        quantity = ?,
-        description = ?
-    WHERE
-        id = ?
-    AND
-        userid = ?
+UPDATE
+    assignments
+SET
+    title = ?,
+    priority = ?,
+    subjectId = ?,
+    dueDate = ?,
+    description = ?
+WHERE
+    assignmentId = ?
+AND userId = ?  -- this is the new line
 ```
 
-Then, in the `/stuff/item/:id` POST request handler that executes that SQL, we can provide the user's email from the request as the new `?`. Change from this:
+Then, in the `/assignment/:id` POST request handler that executes that SQL, we can provide the user's `sub` from the request as the new `?`. Change from this:
 
 ```js
-app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
-    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id], (error, results) => {
+app.post("/assignment/:id", requiresAuth(), ( req, res ) => {
+    db.execute(update_assignment_sql, [req.body.title, req.body.priority, req.body.subject, req.body.dueDate, req.body.description, req.params.id], (error, results) => {
       ...
     }
 }
@@ -531,44 +552,43 @@ app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
 to this:
 
 ```js
-app.post("/stuff/item/:id", requiresAuth(), ( req, res ) => {
-    db.execute(update_item_sql, [req.body.name, req.body.quantity, req.body.description, req.params.id, req.oidc.user.email], (error, results) => {
+app.post("/assignment/:id", requiresAuth(), ( req, res ) => {
+    db.execute(update_assignment_sql, [req.body.title, req.body.priority, req.body.subject, req.body.dueDate, req.body.description, req.params.id, req.oidc.user.sub], (error, results) => {
       ...
     }
 }
 ```
-> Check that filling out the Edit form for an item owned by another user results in no changes. It should still refresh the page on submit, but no changes will be made.
+> Check that filling out the Edit form for an assignment owned by another user results in no changes. It should still refresh the page on submit, but no changes will be made.
 
 #### Restrict DELETE 
 Next, the `DELETE` operation needs to be locked down. 
 
-With the SQL that deletes a single item, change it from :
+With the SQL that deletes a single assignment, change it from :
 
 ```sql 
     DELETE 
     FROM
-        stuff
+        assignments
     WHERE
-        id = ?
+        assignmentId = ?
 ```
 
 to :
 ```sql
     DELETE 
     FROM
-        stuff
+        assignments
     WHERE
-        id = ?
-    AND
-        userid = ?
+        assignmentId = ?
+    AND userId = ?  -- this is the new line
 ```
 
-Then, in the `/stuff/item/:id/delete` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+Then, in the `/assignment/:id/delete` GET request handler that executes that SQL, we can once again provide the user's `sub` from the request as the new `?`. Change from this:
 
 
 ```js
-app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
-    db.execute(delete_item_sql, [req.params.id], (error, results) => {
+app.get("/assignment/:id/delete", requiresAuth(), ( req, res ) => {
+    db.execute(delete_assignment_sql, [req.params.id], (error, results) => {
       ...
     }
 }
@@ -576,47 +596,53 @@ app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
 
 to this:
 ```js
-app.get("/stuff/item/:id/delete", requiresAuth(), ( req, res ) => {
-    db.execute(delete_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
+app.get("/assignment/:id/delete", requiresAuth(), ( req, res ) => {
+    db.execute(delete_assignment_sql, [req.params.id, req.oidc.user.sub], (error, results) => {
       ...
     }
 }
 ```
 
-> Verify that attempting a delete of another users' item  via the button does not, in fact, cause the deletion of the item; it should redirect you to the `/stuff` page, but the database should not have changed, and the item detail page still be accessible. 
+> Verify that attempting a delete of another users' assignment  via the button does not, in fact, cause the deletion of the assignment; it should redirect you to the `/assignments` page, but the database should not have changed, and the assignment detail page still be accessible. 
 
 
-#### Restrict READ (single item)
+#### Restrict READ (single assignment)
 
-Lastly, with the SQL that selects a single item, change it from :
-
+Lastly, with the SQL that selects a single assignment, change it from :
 ```sql 
-    SELECT 
-        id, item, quantity, description 
-    FROM
-        stuff
-    WHERE
-        id = ?
+    SELECT
+        assignmentId, title, priority, subjectName,
+        assignments.subjectId as subjectId,
+        DATE_FORMAT(dueDate, "%W, %M %D %Y") AS dueDateExtended, 
+        DATE_FORMAT(dueDate, "%Y-%m-%d") AS dueDateYMD, 
+        description
+    FROM assignments
+    JOIN subjects
+        ON assignments.subjectId = subjects.subjectId
+    WHERE assignmentId = ?
 ```
 
 to :
 ```sql
-    SELECT 
-        id, item, quantity, description 
-    FROM
-        stuff
-    WHERE
-        id = ?
-    AND
-        userid = ?
+    SELECT
+        assignmentId, title, priority, subjectName,
+        assignments.subjectId as subjectId,
+        DATE_FORMAT(dueDate, "%W, %M %D %Y") AS dueDateExtended, 
+        DATE_FORMAT(dueDate, "%Y-%m-%d") AS dueDateYMD, 
+        description
+    FROM assignments
+    JOIN subjects
+        ON assignments.subjectId = subjects.subjectId
+    WHERE assignmentId = ?
+    AND assignments.userId = ? --this is the new line
 ```
 
-Then, in the `/stuff/item/:id` GET request handler that executes that SQL, we can once again provide the user's email from the request as the new `?`. Change from this:
+Then, in the `/assignment/:id` GET request handler that executes that SQL, we can once again provide the user's `sub` from the request as the new `?`. Change from this:
 
 
 ```js
-app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => {
-    db.execute(read_stuff_item_sql, [req.params.id], (error, results) => {      
+app.get( "/assignment/:id", requiresAuth(), ( req, res ) => {
+    db.execute(read_assignment_detail_sql, [req.params.id], (error, results) => {
       ...
     }
 }
@@ -625,23 +651,23 @@ app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => {
 to this:
 
 ```js
-app.get( "/stuff/item/:id", requiresAuth(), ( req, res ) => {
-    db.execute(read_stuff_item_sql, [req.params.id, req.oidc.user.email], (error, results) => {
+app.get( "/assignment/:id", requiresAuth(), ( req, res ) => {
+    db.execute(read_assignment_detail_sql, [req.params.id, req.oidc.user.sub], (error, results) => {
       ...
     }
 }
 ```
 
-Now, revisit various `/stuff/item/:id` pages, attempting to access items not created by the current user. You should get a `404` response.
+Now, revisit various `/assignment/:id` pages, attempting to access assignments not created by the current user. You should get a `404` response.
 
-> Although it's not exactly true that the item doesn't exist, it is appropriate to act like it doesn't since the user should not be aware of the existence of other user's items. More accurately, we'd say that it is not authorized for that user to access that page. In such cases, we sometimes prefer a `403 Forbidden` code instead of `404 Not Found`.
+> Although it's not exactly true that the assignment doesn't exist, it is appropriate to act like it doesn't since the user should not be aware of the existence of other user's assignments. More accurately, we'd say that it is not authorized for that user to access that page. In such cases, we sometimes prefer a `403 Forbidden` code instead of `404 Not Found`.
 
-> Now both the `Edit` form and `Delete` button cannot be directly accessed any longer by unauthorized users.  It may seem unnecessary to have restricted those other operations when restricting access to the detail page makes it pretty difficult for normal users to accidentally edit or delete an item they can't see. But it's safer to be thorough, as arbitrary GET and POST requests can in fact still be made by malicious users without forms or buttons. 
+> Now both the `Edit` form and `Delete` button cannot be directly accessed any longer by unauthorized users.  It may seem unnecessary to have restricted those other operations when restricting access to the detail page makes it pretty difficult for normal users to accidentally edit or delete an assignment they can't see. But it's safer to be thorough, as arbitrary GET and POST requests can in fact still be made by malicious users without forms or buttons. 
 
 ### (7.7) Conclusion
 
 At this point, we have integrated authentication and some basic authorization.  We have associated data with specific users, and only authorized users to perform CRUD operations on their own data.
 
-What next? Our app could use a user management system, accessible by a limited number of admin users. 
+What next? Our app currently restricts users to a fixed set of subjects to choose from; it would be great if users could create and manage their own custom subjects. 
 
 Before we do that, however, there are some structural changes and improvements that we ought to make to our project that will pay dividends down the road. 
