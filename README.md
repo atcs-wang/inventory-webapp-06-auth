@@ -3,12 +3,9 @@
 This tutorial follows after:
 [Part 05: Implementing CRUD operations: Using Forms and POST requests ](https://github.com/atcs-wang/assignment list-webapp-05-handling-forms-post-crud)
 
+> Some more detailed "next steps" for using Auth0 w/ Node/Express here: [https://github.com/auth0/express-openid-connect/blob/master/EXAMPLES.md#2-require-authentication-for-specific-routes](https://github.com/auth0/express-openid-connect/blob/master/EXAMPLES.md#2-require-authentication-for-specific-routes)
 
-
-Some more detailed "next steps" for using Auth0 w/ Node/Express here: [https://github.com/auth0/express-openid-connect/blob/master/EXAMPLES.md#2-require-authentication-for-specific-routes](https://github.com/auth0/express-openid-connect/blob/master/EXAMPLES.md#2-require-authentication-for-specific-routes)
-
-
-# (7.0) Get started with Auth0
+# (6.0) Get started with Auth0
 
 Go to [https://auth0.com/](https://auth0.com/) and create an account.
 
@@ -107,7 +104,7 @@ Choose:
   * The wizard should be complete, and you can click `Go To Application Settings`.
 
 
-## (7.2) Securing Auth0 secrets in `.env`, setting up for deployment
+## (6.2) Securing Auth0 secrets in `.env`, setting up for deployment
 
 Our authentication basics work for our development code, but a few things need to be fixed up before we can push any changes and (re-)deploy our app.
 
@@ -146,7 +143,7 @@ The `<SECRET>` can technically be replaced with anything, but Auth0's `Applicati
 
 Now you can push the code without worrying about exposing the secrets. 
 
-### (7.2.1) OPTIONAL: Deployed website update
+### (6.2.1) OPTIONAL: Deployed website update
 
 However, if you have a deployed app, we need it to be given those environment variables too. 
 
@@ -165,7 +162,7 @@ Then, you need to update the `Application Settings` on Auth0: In the `Applicatio
   ``` 
 
 Save your changes.
-## (7.3) Adding a log-in / log-out button (+ nav bar)
+## (6.3) Adding a log-in / log-out button (+ nav bar)
 
 We obviously need a way to log in and out that's more intuitive for the user than changing the URL manually. 
 
@@ -207,7 +204,7 @@ Go ahead and update the `<nav>` in each of the EJS views, adding the buttons in 
 
 Test the buttons to make sure they work.
 
-## (7.4) Changing view on authentication; displaying user information
+## (6.4) Changing view on authentication; displaying user information
 
 We probably only want to show one of the two buttons at a time - LOGIN if not yet authenticated, and LOGOUT if already authenticated. We might also like to show, if you are logged in, some of your user information, making it clear who you're logged in as.
 
@@ -285,7 +282,7 @@ Let's use them to customize our nav bar view ( on every page):
 
 Test your nav bar on each page, both logged in and out. 
 
-## (7.5) Authorization for specific routes
+## (6.5) Authorization for specific routes
 Now that our users can log in/out and see their authentication status, we now move the issue of *authorization* - only allowing certain kinds of people into certain parts of the site.
 
 The most basic kind of authorization simply requires that the users have been authenticated at all. Auth0's `express-openid-connect` library provides the `requiresAuth()` function for this purpose, demonstrated by the sample `/profile` route we set up earlier:
@@ -329,7 +326,7 @@ Now, log out and attempt accessing various pages. You should be, in each case, r
 
 > If you simply want to require authentication for *every* page,  yet another alternative would be to change the `config` object's `authRequired` property to `true`.
 
-## (7.6) Associating assignment data with users
+## (6.6) Associating assignment data with users
 Now that you can only access certain routes when authenticated, we can confidently utilize their user information in those routes. 
 
 Our final step is a very consequential one: associate every assignment in our database with the user who created and owns that assignment. 
@@ -339,7 +336,7 @@ The identification token (`req.oidc.user`) always has a field called `sub` (shor
 > Another option is to use the user's `sub` (`req.oidc.user.`sub``) as a unique identifier. Most social logins are ultimately based on an `sub` address (Google for example), but its not universal unless you're selective about your login options.
 
 
-### (7.6.1) Add a `userId` column to the database table
+### (6.6.1) Add a `userId` column to the database table
 
 First, we need to add a column to the database table called something like "userId".
 
@@ -398,7 +395,7 @@ or (if you set up the `npm` script in `package.json`)
 >
 > We DO still need (for now) the part of `db_insert_sample.js` that fills in the `subjects` table.
 
-### (7.6.2) Update the CREATE operation
+### (6.6.2) Update the CREATE operation
 
 First, we need to make it such that whenever a user tries to create a new assignment, their `sub` is entered into the database along with it.
 
@@ -443,7 +440,7 @@ app.post("/assignments", requiresAuth(), ( req, res ) => {
 
 Try using the "Add" form. If you check your database, you ought to see that whatever table row you added includes the logged-in user's `sub`.
 
-### (7.6.2) Update the READ (assignment list) operation
+### (6.6.2) Update the READ (assignment list) operation
 
 Now we need to restrict our users to only seeing data that they've created and are associated with.
 
@@ -494,7 +491,7 @@ app.get( "/assignments", requiresAuth(), ( req, res ) => {
 
 Now, revisit the `/assignments` page. You should only see the assignment(s) created after `userId` was incorporated into the database. Add more assignments and confirm that they appear. Log out and log in as various users, creating new assignments and confirming that only those assignments, and not other user's data, is displayed.
 
-### (7.6.3) Update the UPDATE, DELETE, and READ (assignment) operations
+### (6.6.3) Update the UPDATE, DELETE, and READ (assignment) operations
 
 While users can now only see data that they've created themselves on the `/assignments` assignment list page, they can still access the assignment detail pages for assignments created by *any* user. 
 
@@ -662,9 +659,9 @@ Now, revisit various `/assignment/:id` pages, attempting to access assignments n
 
 > Although it's not exactly true that the assignment doesn't exist, it is appropriate to act like it doesn't since the user should not be aware of the existence of other user's assignments. More accurately, we'd say that it is not authorized for that user to access that page. In such cases, we sometimes prefer a `403 Forbidden` code instead of `404 Not Found`.
 
-> Now both the `Edit` form and `Delete` button cannot be directly accessed any longer by unauthorized users.  It may seem unnecessary to have restricted those other operations when restricting access to the detail page makes it pretty difficult for normal users to accidentally edit or delete an assignment they can't see. But it's safer to be thorough, as arbitrary GET and POST requests can in fact still be made by malicious users without forms or buttons. 
+> Now both the `Edit` form and `Delete` button cannot be directly accessed any longer by unauthorized users.  It may seem unnecessary to have restricted those other operations when restricting access to the list or detail page makes it pretty difficult for normal users to accidentally edit or delete an assignment they can't see. But it's safer to be thorough, as arbitrary GET and POST requests can in fact still be made by malicious users without forms or buttons. 
 
-### (7.7) Conclusion
+### (6.7) Conclusion
 
 At this point, we have integrated authentication and some basic authorization.  We have associated data with specific users, and only authorized users to perform CRUD operations on their own data.
 

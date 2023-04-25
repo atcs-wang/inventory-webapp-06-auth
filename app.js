@@ -71,6 +71,7 @@ const read_assignments_all_sql = `
     WHERE assignments.userId = ?
     ORDER BY assignments.assignmentId DESC
 `
+
 app.get( "/assignments",  requiresAuth(), ( req, res ) => {
     db.execute(read_assignments_all_sql, [req.oidc.user.sub], (error, results) => {
         if (DEBUG)

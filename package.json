@@ -13,14 +13,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/atcs-wang/inventory-webapp-05-handling-forms-post-crud.git"
+    "url": "git+https://github.com/atcs-wang/inventory-webapp-06-auth.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/atcs-wang/inventory-webapp-05-handling-forms-post-crud/issues"
+    "url": "https://github.com/atcs-wang/inventory-webapp-06-auth/issues"
   },
-  "homepage": "https://github.com/atcs-wang/inventory-webapp-05-handling-forms-post-crud#readme",
+  "homepage": "https://github.com/atcs-wang/inventory-webapp-06-auth#readme",
   "dependencies": {
     "dotenv": "^16.0.0",
     "ejs": "^3.1.9",
