@@ -1,7 +1,9 @@
-# Part 06: Authentication and Authorization  
+# Part 06a: Authentication and Authorization  
 
-This tutorial follows after:
-[Part 05: Implementing CRUD operations: Using Forms and POST requests ](https://github.com/atcs-wang/assignment list-webapp-05-handling-forms-post-crud)
+This tutorial follows after: 
+[Part 05: Implementing CRUD operations: Using Forms and POST requests](https://github.com/atcs-wang/inventory-webapp-05-handling-forms-post-crud)
+
+You may have optionally done [Part 06b: First Deployment](https://github.com/atcs-wang/inventory-webapp-06-first-deployment) before this tutorial as well.
 
 > Some more detailed "next steps" for using Auth0 w/ Node/Express here: [https://github.com/auth0/express-openid-connect/blob/master/EXAMPLES.md#2-require-authentication-for-specific-routes](https://github.com/auth0/express-openid-connect/blob/master/EXAMPLES.md#2-require-authentication-for-specific-routes)
 
@@ -145,7 +147,7 @@ Now you can push the code without worrying about exposing the secrets.
 
 ### (6.2.1) OPTIONAL: Deployed website update
 
-However, if you have a deployed app, we need it to be given those environment variables too. 
+If you already have a deployed app, we need the hosting platform to be given these new environment variables too. 
 
 The only one that needs to be changed for the deployed environment is the `AUTH0_BASE_URL`, which should be the URL of the actual hosted site, not `localhost`.
 
@@ -665,6 +667,12 @@ Now, revisit various `/assignment/:id` pages, attempting to access assignments n
 
 At this point, we have integrated authentication and some basic authorization.  We have associated data with specific users, and only authorized users to perform CRUD operations on their own data.
 
-What next? Our app currently restricts users to a fixed set of subjects to choose from; it would be great if users could create and manage their own custom subjects. 
+What next? If you haven't yet, we are in a position to deploy our app for the first time, hosting it publically on the web. This is optional, but it is a good experience to have. There are just a few minor changes to make before we do so.
 
-Before we do that, however, there are some structural changes and improvements that we ought to make to our project that will pay dividends down the road. 
+Check out [# Part 06b: First Deployment](https://github.com/atcs-wang/inventory-webapp-06-first-deployment)
+
+However, our app currently restricts users to a fixed set of subjects to choose from; it would be great if users could create and manage their own custom subjects. As we do that, however, there are some structural changes and improvements that we ought to make to our project that will pay dividends down the road for future expansion.
+
+Check out [Part 07: More CRUD operations, code reorganization](https://github.com/atcs-wang/inventory-webapp-07-reorganization-expansion). Note that the README tutorial is currently incomplete.
+
+
